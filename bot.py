@@ -2,6 +2,8 @@
 import os
 import random
 import discord
+from discord_slash import SlashCommand
+from discord_slash.utils.manage_commands import create_option, create_choice
 import math
 import requests
 from discord.ext import commands
@@ -10,14 +12,26 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 WEATHER_KEY = os.getenv('WEATHER_KEY')
-bot = commands.Bot(command_prefix='!')
+client = discord.Client(intents=discord.Intents.all())
+slash = SlashCommand(client, sync_commands=True)
 
-@bot.event
+@client.event
 async def on_ready():
-    print(f'{bot.user.name} has connected to Discord!')
+    print('Connected!')
 
-
-@bot.command(name='roll', help='Rolls a skill check')
+@slash.slash(name='roll',
+    description='Rolls a skill check',
+    options=[
+        create_option(
+            name='accuracy_difficulty',
+            description='The accuracy/difficulty level of the check',
+            option_type=4,
+            required=True),
+        create_option(
+            name='modifier',
+            description='The flat modifier of the check',
+            option_type=4,
+            required=True)])
 async def roll(ctx, accuracy_difficulty: int, modifier: int):
     roll = random.randint(1,20)
     response = [
@@ -43,7 +57,34 @@ async def roll(ctx, accuracy_difficulty: int, modifier: int):
     ]
     await ctx.send('\n'.join(response))
 
-@bot.command(name='weather', help='Gets the weather of one of the habitable moons.\nCurrently supported: Ari, Bay, Cole, Drop')
+@slash.slash(name='weather',
+    description='Gets the weather of one of the habitable moons.',
+    options=[
+        create_option(
+            name='moon_name',
+            description='The moon to get the weather of',
+            option_type=3,
+            required=True,
+            choices=[
+                create_choice(
+                    name='Ari',
+                    value='Ari'
+                ),  
+                create_choice(
+                    name='Bay',
+                    value='Bay'
+                ),
+                create_choice(
+                    name='Cole',
+                    value='Cole'
+                ),
+                create_choice(
+                    name='Drop',
+                    value='Drop'
+                )
+            ]
+        )
+    ])
 async def weather(ctx, moon_name):
     moon_city_dictionary = {
         'Ari': 'Riyadh',
@@ -70,4 +111,4 @@ async def weather(ctx, moon_name):
         'Cloud Cover: ' + str(weather_data['cloud']) + '%'
     ]
     await ctx.send('\n'.join(weather_text))
-bot.run(TOKEN)
+client.run(TOKEN)
